@@ -6,23 +6,30 @@ HOST = ''
 PORT = 80
 REQ_BUFFER_SIZE = 1024
 
-socket_in = socket_lib.socket()
-socket_in.bind((HOST, PORT))
-socket_in.listen()
 
-print(f"Listening on port {PORT} ...")
+def start():
+    socket_in = socket_lib.socket()
+    socket_in.bind((HOST, PORT))
+    socket_in.listen()
 
-while True:
-    client_socket, client_address = socket_in.accept()
-    client_request = client_socket.recv(REQ_BUFFER_SIZE)
+    print(f"Listening on port {PORT} ...")
 
-    try:
-        request_method, request_resource = parse(client_request)
-    except InvalidHttpRequestException:
-        client_socket.send(b'Invalid request!')
+    while True:
+        client_socket, client_address = socket_in.accept()
+        client_request = client_socket.recv(REQ_BUFFER_SIZE)
+
+        try:
+            request_method, requested_resource = parse(client_request)
+        except InvalidHttpRequestException:
+            client_socket.send(b'Invalid request!')
+            client_socket.close()
+            continue
+
+        response = f"OK! Your request was: {request_method} {requested_resource}"
+        client_socket.send(response.encode())
+
         client_socket.close()
-        continue
 
-    client_socket.send(b'OK!')
 
-    client_socket.close()
+if __name__ == '__main__':
+    start()
