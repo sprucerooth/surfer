@@ -1,0 +1,2 @@
+class InvalidHttpRequestException(Exception):
+    pass
