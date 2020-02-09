@@ -1,24 +1,45 @@
 from exceptions import *
 from os import path
+from http_method import HttpMethod
 
-METHODS = ('HEAD', 'GET', 'POST', 'PUT')
-
-
-def parse(http_request: bytes):
-    decoded_request = http_request.decode("unicode_escape", "utf-8")
-    request_method, requested_resource = _split_request(decoded_request)
-    if request_method not in METHODS:
-        raise InvalidHttpRequestException
-
-    if not path.exists(requested_resource):
-        raise InvalidHttpRequestException
-
-    return request_method, requested_resource
+RES_LOCATION = "res"
 
 
-def _split_request(request: str):
-    split_request = request.split()
-    if len(split_request) < 2:
-        raise InvalidHttpRequestException
-    else:
-        return split_request[0], split_request[1]
+class HttpRequest:
+    def __init__(self, raw_request: bytes):
+        decoded_lines = raw_request.decode("unicode_escape", "utf-8").splitlines()
+        self.method, self.resource, self.version = HttpRequest.__parse_start_line(decoded_lines[0])
+
+    @staticmethod
+    def __parse_start_line(line: str):
+        method, resource, version = HttpRequest.__val_start_line_length(line)
+        HttpRequest.__val_method(method)
+        resource = HttpRequest.__val_resource(resource)
+        HttpRequest.__val_version(version)
+        return method, resource, version
+
+    @staticmethod
+    def __val_start_line_length(line: str):
+        split_line = line.split()
+        if not len(split_line) == 3:
+            raise InvalidHttpRequestException
+        return split_line[0], split_line[1], split_line[2]
+
+    @staticmethod
+    def __val_method(method: str):
+        if method not in HttpMethod.__members__:
+            raise InvalidHttpRequestException
+        return HttpMethod[method]
+
+    @staticmethod
+    def __val_resource(resource: str):
+        if resource == '/':
+            resource = 'index.html'
+        if not path.exists(f"{RES_LOCATION}/{resource}"):
+            raise InvalidHttpRequestException
+        return f"{RES_LOCATION}/{resource}"
+
+    @staticmethod
+    def __val_version(ver: str):
+        if not ver == "HTTP/1.1":
+            raise InvalidHttpRequestException
